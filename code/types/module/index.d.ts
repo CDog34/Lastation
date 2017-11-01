@@ -1,0 +1,1 @@
+/// <reference path="./websocket/index.d.ts" />

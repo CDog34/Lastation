@@ -1,0 +1,1 @@
+/// <reference path="./ws.handshake.d.ts" />
