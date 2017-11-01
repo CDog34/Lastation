@@ -12,7 +12,7 @@ const httpServer = createServer((req, res) => {
   req.addListener('end', function () {
     fileServer.serve(req, res, (e: any) => {
       if (!e) { return }
-      res.statusCode = e.statusCode
+      res.statusCode = e.status
       res.end(e.message)
     });
   }).resume();
