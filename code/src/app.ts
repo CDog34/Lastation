@@ -1,3 +1,5 @@
+/// <reference path="../typings/index.d.ts" />
+
 import { createServer, IncomingMessage, ServerResponse } from 'http'
 import { Server as StaticServer } from 'node-static'
 import { Socket } from 'net'
