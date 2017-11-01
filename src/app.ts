@@ -2,7 +2,7 @@ import { createServer, IncomingMessage, ServerResponse } from 'http'
 import { Server as StaticServer } from 'node-static'
 import { Socket } from 'net'
 
-import { processWebsocket } from './websocket'
+import { processWebsocket } from './modules/websocket'
 
 
 const fileServer = new StaticServer('./public')

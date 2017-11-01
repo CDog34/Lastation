@@ -23,6 +23,7 @@
     "typescript": "^2.5.3"
   },
   "nodemonConfig": {
+    "delay": "500",
     "watch": [
       "dist/**/*"
     ],
