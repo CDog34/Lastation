@@ -1,0 +1,17 @@
+{
+  "name": "lastation",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@types/node": "^8.0.47",
+    "@types/node-static": "^0.7.0",
+    "node-static": "^0.7.10",
+    "typescript": "^2.5.3"
+  }
+}
