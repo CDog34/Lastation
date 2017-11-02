@@ -36,13 +36,14 @@ import { createHash } from 'crypto'
 const SUPPORTED_WS_VERSION: Array<string> = ['13']
 const WS_UUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11'
 
-export function handleWSHandshake (req: IncomingMessage, socket: Socket): void {
+export function handleWSHandshake (req: IncomingMessage, socket: Socket): Socket {
   const res = new ServerResponse(req)
   res.assignSocket(socket)
   try {
     validHttpHeaders(req)
     const spec = getHandShakeSpecsFromHeader(req)
     handShakeSuccess(res, spec)
+    return socket
   } catch (err) {
     handShakeFail(res, err)
     throw err
@@ -51,6 +52,7 @@ export function handleWSHandshake (req: IncomingMessage, socket: Socket): void {
 
 function handShakeFail (res: ServerResponse, err: Error) {
   res.statusCode = 400
+  res.setHeader('Sec-Websocket-Version', SUPPORTED_WS_VERSION.join(', '))
   res.end(err.message)
 }
 
