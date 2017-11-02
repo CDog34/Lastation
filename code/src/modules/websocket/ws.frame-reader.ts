@@ -12,43 +12,35 @@ export function handleFrame (data: Buffer) {
   const headerHigh4 = FRAME_HEADER << 4
   switch (data.readUIntBE(0, 1)) {
     case headerHigh4 + Opcode.Continuation:
-      console.log('Continuation')
+      logMessage('Continuation')
       break
     case headerHigh4 + Opcode.Text:
+      logMessage('Text')
       handleTextFrame(data)
-      console.log('Text')
       break
     case headerHigh4 + Opcode.Binary:
-      console.log('Binary')
+      logMessage('Binary')
       break
     case headerHigh4 + Opcode.Close:
-      console.log('Close')
+      logMessage('Close')
       break
     case headerHigh4 + Opcode.Ping:
-      console.log('Ping')
+      logMessage('Ping')
       break
     case headerHigh4 + Opcode.Pong:
-      console.log('Pong')
+      logMessage('Pong')
       break
     default:
       console.log('Unknown frame', data)
   }
-  // console.log((FRAME_HEADER << 4) + Opcode.Text)
-
-  // console.log(`\x1B[44;1m[WebSocket]\x1B[0m\x1B[34m WebSocket Data Received: \x1B[0m`, data)
-  // console.log(`\x1B[44;1m[WebSocket]\x1B[0m\x1B[34m WebSocket Data0 Received: ${data.readUInt32LE(0).toString(2)} \x1B[0m`)
-  // console.log(`\x1B[44;1m[WebSocket]\x1B[0m\x1B[34m WebSocket Data1 Received: ${data.readUInt32LE(4).toString(2)} \x1B[0m`)
-  // console.log(`\x1B[44;1m[WebSocket]\x1B[0m\x1B[34m WebSocket Data2 Received: ${data.readUInt32LE(8).toString(2)} \x1B[0m`)
-  // console.log(`\x1B[44;1m[WebSocket]\x1B[0m\x1B[34m WebSocket Data4 Received: ${data.readUInt32LE(12).toString(2)} \x1B[0m`)
 }
 
 function handleTextFrame (data: Buffer) {
   let offsetByte = 1
   let payloadLength = data.readUInt8(offsetByte++)
   const isMask = (payloadLength & 0x80) > 0
-  let maskingKey = 0
+  let maskingKey: Buffer
   payloadLength = payloadLength & 0x7F
-  console.log(payloadLength)
   switch (payloadLength) {
     case 126:
       payloadLength = data.readUInt16BE(offsetByte)
@@ -59,8 +51,22 @@ function handleTextFrame (data: Buffer) {
       offsetByte += 8
   }
   if (isMask) {
-    maskingKey = data.readUInt32BE(offsetByte)
+    maskingKey = data.slice(offsetByte, offsetByte + 4)
     offsetByte += 4
   }
-  console.log(isMask, payloadLength, offsetByte, maskingKey)
+  const payloadDataBuffer: Buffer = data.slice(offsetByte, offsetByte + payloadLength)
+  const plainPayload = umaskPayload(payloadDataBuffer, maskingKey)
+  console.log(`\x1B[44;1m[WebSocket]\x1B[0m\x1B[32m Text Message Received: ${plainPayload.toString()}  \x1B[0m`)
+
+}
+
+function umaskPayload (payloadBuffer: Buffer, maskingKey: Buffer): Buffer {
+  for (let i = 0; i < payloadBuffer.length; i++) {
+    payloadBuffer[i] = payloadBuffer[i] ^ maskingKey[i % 4]
+  }
+  return payloadBuffer
+}
+
+function logMessage (messageType: string) {
+  console.log(`\x1B[44;1m[WebSocket]\x1B[0m\x1B[34m Received Frame With Opcode: ${messageType}  \x1B[0m`)
 }
