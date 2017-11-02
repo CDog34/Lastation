@@ -83,7 +83,8 @@ function validHttpHeaders (req: IncomingMessage): boolean {
     'sec-websocket-key': key,
     'sec-websocket-version': version
    } = req.headers
-  console.log(`\x1B[44;1m[WebSocket]\x1B[0m\x1B[34m Validating HandShake Request:  ${upgrade}, ${key}, ${version}  \x1B[0m`)
+  console.log(`\x1B[44;1m[WebSocket]\x1B[0m\x1B[34m Validating HandShake Request: ${req.method} ${upgrade}, ${key}, ${version}  \x1B[0m`)
+  if (req.method.toLowerCase() !== 'get') throw new Error('Invalid Request Header: Method')
   if (!upgrade || upgrade.toString().toLowerCase() !== 'websocket') throw new Error('Invalid Request Header: Upgrade')
   if (!key) throw new Error('Invalid Request Header: Sec-Websocket-Key')
   if (!version || SUPPORTED_WS_VERSION.indexOf(version.toString()) === -1) throw new Error('Invalid Request Header: Sec-Websocket-Version')
