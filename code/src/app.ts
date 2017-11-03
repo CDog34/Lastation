@@ -5,7 +5,9 @@ import { Server as StaticServer } from 'node-static'
 import { Socket } from 'net'
 
 import { WebSocketServer } from './modules/websocket'
+import { createLogger } from './modules/logger'
 
+const console = createLogger('HttpServer')
 
 const fileServer = new StaticServer('./public')
 

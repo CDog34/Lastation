@@ -4,23 +4,38 @@ import { Socket } from 'net'
 import { handleWSHandshake } from './ws.handshake'
 
 export class WebSocketConnection {
-  currentStage = 'OPENING'
-  socket: Socket
-  httpRequest: IncomingMessage
+  private _currentStage = 'OPENING'
+  private socket: Socket
+  private httpRequest: IncomingMessage
 
   constructor(req: IncomingMessage, socket: Socket) {
     this.socket = socket
     this.httpRequest = req
   }
 
+  get currentStage (): string {
+    return this._currentStage
+  }
+
   public handShake () {
-    if (this.currentStage !== 'OPENING') return
+    if (this._currentStage !== 'OPENING') return
     try {
       handleWSHandshake(this.httpRequest, this.socket)
-      this.currentStage = 'OPENED'
+      this._currentStage = 'OPENED'
     } catch (err) {
-      this.currentStage = 'FAILED'
+      this._currentStage = 'FAILED'
       throw err
+    }
+  }
+
+  public destroy () {
+    try {
+      this.socket.destroyed && this.socket.destroy()
+      this.socket = null
+      this.httpRequest = null
+      this._currentStage = 'DESTROYED'
+    } catch (err) {
+
     }
   }
 }

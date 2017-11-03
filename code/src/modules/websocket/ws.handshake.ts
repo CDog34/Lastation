@@ -33,6 +33,10 @@ import { IncomingMessage, ServerResponse } from 'http'
 import { Socket } from 'net'
 import { createHash } from 'crypto'
 
+import { createLogger } from '../logger'
+
+const console = createLogger('Websocket-handshake')
+
 const SUPPORTED_WS_VERSION: Array<string> = ['13']
 const WS_UUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11'
 
@@ -62,7 +66,6 @@ function handShakeSuccess (res: ServerResponse, spec: WSHandshakeHeaderSpecs) {
   res.setHeader('Upgrade', 'websocket')
   res.setHeader('Sec-Websocket-Accept', spec.accept)
   res.flushHeaders()
-  console.log(`\x1B[44;1m[WebSocket]\x1B[0m\x1B[32m WebSocket Connection Established \x1B[0m`)
 
 }
 
@@ -71,7 +74,7 @@ function getHandShakeSpecsFromHeader (req: IncomingMessage): WSHandshakeHeaderSp
     'sec-websocket-key': key
    } = req.headers
   key = key.toString()
-  console.log(`\x1B[44;1m[WebSocket]\x1B[0m\x1B[34m Generating Accept String for: ${key} \x1B[0m`)
+  console.log(`Generating Accept String for: ${key}`)
   const hash = createHash('sha1')
   hash.update(key + WS_UUID)
   return {
@@ -85,7 +88,7 @@ function validHttpHeaders (req: IncomingMessage): boolean {
     'sec-websocket-key': key,
     'sec-websocket-version': version
    } = req.headers
-  console.log(`\x1B[44;1m[WebSocket]\x1B[0m\x1B[34m Validating HandShake Request: ${req.method} ${upgrade}, ${key}, ${version}  \x1B[0m`)
+  console.log(`Validating HandShake Request: ${req.method} ${upgrade}, ${key}, ${version}`)
   if (req.method.toLowerCase() !== 'get') throw new Error('Invalid Request Header: Method')
   if (!upgrade || upgrade.toString().toLowerCase() !== 'websocket') throw new Error('Invalid Request Header: Upgrade')
   if (!key) throw new Error('Invalid Request Header: Sec-Websocket-Key')
