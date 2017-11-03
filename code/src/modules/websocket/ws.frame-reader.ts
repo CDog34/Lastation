@@ -9,25 +9,26 @@ enum Opcode {
 }
 
 export function handleFrame (data: Buffer) {
-  const headerHigh4 = FRAME_HEADER << 4
-  switch (data.readUIntBE(0, 1)) {
-    case headerHigh4 + Opcode.Continuation:
+  const isFin = (data.readUInt8(0) & 0x80) > 0
+  console.log(isFin)
+  switch (data.readUInt8(0) & 0x0F) {
+    case Opcode.Continuation:
       logMessage('Continuation')
       break
-    case headerHigh4 + Opcode.Text:
+    case Opcode.Text:
       logMessage('Text')
       handleTextFrame(data)
       break
-    case headerHigh4 + Opcode.Binary:
+    case Opcode.Binary:
       logMessage('Binary')
       break
-    case headerHigh4 + Opcode.Close:
+    case Opcode.Close:
       logMessage('Close')
       break
-    case headerHigh4 + Opcode.Ping:
+    case Opcode.Ping:
       logMessage('Ping')
       break
-    case headerHigh4 + Opcode.Pong:
+    case Opcode.Pong:
       logMessage('Pong')
       break
     default:
