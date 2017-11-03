@@ -4,7 +4,7 @@ import { createServer, IncomingMessage, ServerResponse } from 'http'
 import { Server as StaticServer } from 'node-static'
 import { Socket } from 'net'
 
-import { processWebsocket } from './modules/websocket'
+import { WebSocketServer } from './modules/websocket'
 
 
 const fileServer = new StaticServer('./public')
@@ -20,9 +20,7 @@ const httpServer = createServer((req, res) => {
   }).resume();
 })
 
-httpServer.addListener('upgrade', (req: IncomingMessage, socket: Socket) => {
-  processWebsocket(req, socket)
-})
+const wsServer = WebSocketServer.createFromHttpServer(httpServer)
 
 httpServer.listen(2233, () => {
   console.log('ServerStart')
