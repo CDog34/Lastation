@@ -5,7 +5,7 @@
  * 
  * @class Logger
  */
-class Logger {
+export class Logger {
   moduleName: string
 
   constructor(moduleName: string) {
