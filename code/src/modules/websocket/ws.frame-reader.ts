@@ -22,8 +22,14 @@ enum Opcode {
  */
 export function getLengthInFrame (data: Buffer): number {
   const payload = data.readUInt8(1)
-  const payloadLength = getSingleWSFramePayloadLength(data)
+  let payloadLength = getSingleWSFramePayloadLength(data)
   const isMask = (payload & 0x80) > 0
+  if (payloadLength > 125) {
+    payloadLength += 2
+  }
+  if (payloadLength > 65535) {
+    payloadLength += 6
+  }
   return payloadLength + 2 + (isMask ? 4 : 0)
 }
 
@@ -112,7 +118,7 @@ function handleTextFrame (data: Buffer) {
 }
 
 function umaskPayload (payloadBuffer: Buffer, maskingKey: Buffer): Buffer {
-  for (let i = 0; i < payloadBuffer.length; i++) {
+  for (let i = 0; i < payloadBuffer.byteLength; i++) {
     payloadBuffer[i] = payloadBuffer[i] ^ maskingKey[i % 4]
   }
   return payloadBuffer

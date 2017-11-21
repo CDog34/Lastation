@@ -29,13 +29,23 @@ export class Queue<T> extends EventEmitter {
     }
   }
 
-  public deQueue (): T {
-    try {
-      return this.queue.shift()
-    } catch (err) {
-      console.error(err)
-      return null
+  private doDeQueue (amount: number = 1): any {
+    if (amount <= 0) { throw new Error('Amount Too Small') }
+    if (amount > this.queue.length) { throw new Error('Amount Too Big') }
+    if (amount === 1) { return this.queue.shift() }
+    const res = []
+    for (let i = 0; i < amount; i++) {
+      res.push(this.queue.shift())
     }
+    return res
+  }
+
+  public deQueueMultiple (amount: number): Array<T> {
+    return this.doDeQueue(amount)
+  }
+
+  public deQueue (): T {
+    return this.doDeQueue(1)
   }
 
   public get header (): T {
@@ -50,5 +60,9 @@ export class Queue<T> extends EventEmitter {
 
   public get isEmpty (): boolean {
     return !this.length
+  }
+
+  public getMemberAt (index: number): T {
+    return this.queue[index] || null
   }
 }

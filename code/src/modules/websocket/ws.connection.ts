@@ -53,14 +53,35 @@ export class WebSocketConnection {
   private handleSocketChunk () {
     if (this.socketHandlerBusy || this.socketChunkQueue.isEmpty) { return }
     this.socketHandlerBusy = true
+    let needNextTrigger = true
     const queueHeader = this.socketChunkQueue.header
     const lengthInHeader = getLengthInFrame(queueHeader)
-    if (lengthInHeader === queueHeader.length) {
+    if (queueHeader.byteLength === lengthInHeader) {
+      // 包长度吻合，是正常的包
       this.webSocketFrameQueue.enQueue(this.socketChunkQueue.deQueue())
-      this.socketHandlerBusy = false
-      this.handleSocketChunk()
+    } else if (lengthInHeader > queueHeader.byteLength) {
+      // 头部包的大小大于当前收到的包的大小，说明接下来还有包是是属于当前 Frame 的
+      let bufferAmount = 1
+      let totalBufferLength = queueHeader.byteLength
+      while (totalBufferLength < lengthInHeader && !!this.socketChunkQueue.getMemberAt(bufferAmount)) {
+        totalBufferLength += this.socketChunkQueue.getMemberAt(bufferAmount++).byteLength
+      }
+      if (totalBufferLength === lengthInHeader) {
+        // 已得到正确的 Buffer
+        this.webSocketFrameQueue.enQueue(Buffer.concat(this.socketChunkQueue.deQueueMultiple(bufferAmount)))
+      } else if (totalBufferLength > lengthInHeader) {
+        // 错误的包，丢弃之
+        this.socketChunkQueue.deQueue()
+      } else {
+        // 还未收到后续的包，继续等待。
+        needNextTrigger = false
+      }
+    } else {
+      // 错误的包，丢弃之
+      this.socketChunkQueue.deQueue()
     }
-    // TODO: socket 层拼接逻辑
+    this.socketHandlerBusy = false
+    needNextTrigger && this.handleSocketChunk()
   }
 
   private handleWSFrame () {
@@ -68,7 +89,6 @@ export class WebSocketConnection {
     this.wsFrameHandlerBusy = true
     if (isWSFrameFin(this.webSocketFrameQueue.header)) {
       const content = getFrameContent(this.webSocketFrameQueue.deQueue())
-      console.log(content)
       this.wsFrameHandlerBusy = false
       this.handleWSFrame()
       return
