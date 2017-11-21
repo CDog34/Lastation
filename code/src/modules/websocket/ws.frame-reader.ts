@@ -49,9 +49,17 @@ export function getFrameContent (data: Array<Buffer> | Buffer): IFrameData {
   const buffers = data.map(getSingleWSFramePayloadBuffer)
   const entireContent = Buffer.concat(buffers)
   if ((data[0].readUInt8(0) & 0x0F) === Opcode.Text) {
-    return entireContent.toString()
+    return {
+      type: 'text',
+      rawBuffer: entireContent,
+      content: entireContent.toString()
+    }
   } else {
-    return entireContent
+    return {
+      type: 'raw',
+      rawBuffer: entireContent,
+      content: entireContent
+    }
   }
   // switch (data.readUInt8(0) & 0x0F) {
   //   case Opcode.Continuation:
