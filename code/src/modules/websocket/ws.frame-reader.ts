@@ -67,54 +67,6 @@ export function getFrameContent (data: Array<Buffer> | Buffer): IFrameData {
       content: entireContent
     }
   }
-  // switch (data.readUInt8(0) & 0x0F) {
-  //   case Opcode.Continuation:
-  //     logMessage('Continuation')
-  //     break
-  //   case Opcode.Text:
-  //     logMessage('Text')
-  //     handleTextFrame(data)
-  //     break
-  //   case Opcode.Binary:
-  //     logMessage('Binary')
-  //     break
-  //   case Opcode.Close:
-  //     logMessage('Close')
-  //     break
-  //   case Opcode.Ping:
-  //     logMessage('Ping')
-  //     break
-  //   case Opcode.Pong:
-  //     logMessage('Pong')
-  //     break
-  //   default:
-  //     console.log('Unknown frame', data)
-  // }
-}
-
-function handleTextFrame (data: Buffer) {
-  let offsetByte = 1
-  let payloadLength = data.readUInt8(offsetByte++)
-  const isMask = (payloadLength & 0x80) > 0
-  let maskingKey: Buffer
-  payloadLength = payloadLength & 0x7F
-  switch (payloadLength) {
-    case 126:
-      payloadLength = data.readUInt16BE(offsetByte)
-      offsetByte += 2
-      break
-    case 127:
-      payloadLength = (data.readUInt32BE(offsetByte) << 32) + data.readUInt32BE(offsetByte + 4)
-      offsetByte += 8
-  }
-  if (isMask) {
-    maskingKey = data.slice(offsetByte, offsetByte + 4)
-    offsetByte += 4
-  }
-  const payloadDataBuffer: Buffer = data.slice(offsetByte, offsetByte + payloadLength)
-  const plainPayload = umaskPayload(payloadDataBuffer, maskingKey)
-  console.log(`\x1B[44;1m[WebSocket]\x1B[0m\x1B[32m Text Message Received: ${plainPayload.toString()}  \x1B[0m`)
-
 }
 
 function umaskPayload (payloadBuffer: Buffer, maskingKey: Buffer): Buffer {
@@ -175,4 +127,11 @@ function getSingleWSFramePayloadBuffer (data: Buffer): Buffer {
   }
   const payloadDataBuffer: Buffer = data.slice(offsetByte, offsetByte + payloadLength)
   return isMask ? umaskPayload(payloadDataBuffer, maskingKey) : payloadDataBuffer
+}
+
+export function isControlFrame (data: Buffer) {
+  //Control frames are identified by opcodes where the most significant
+  // bit of the opcode is 1.
+  const high8 = data.readUInt8(0)
+  return (high8 & 0x08) > 0
 }

@@ -2,11 +2,13 @@ import { IncomingMessage } from 'http'
 import { Socket } from 'net'
 
 import { handleWSHandshake } from './ws.handshake'
-import { getLengthInFrame, isWSFrameFin, getFrameContent } from './ws.frame-reader'
+import { getLengthInFrame, isWSFrameFin, getFrameContent, isControlFrame } from './ws.frame-reader'
 
 import { Queue } from '../../utils/queue'
+import { createLogger } from '../logger'
 
 
+const console = createLogger('ws.connection')
 export class WebSocketConnection {
   private _currentStage = 'OPENING'
   private socket: Socket
@@ -15,12 +17,17 @@ export class WebSocketConnection {
   private wsFrameHandlerBusy: boolean = false
   private socketChunkQueue: Queue<Buffer>
   private webSocketFrameQueue: Queue<Buffer>
+  private wsFragmentCache: Array<Buffer>
 
   constructor (req: IncomingMessage, socket: Socket) {
     this.socket = socket
     this.httpRequest = req
+  }
+
+  private connectionEstablished () {
     this.socketChunkQueue = new Queue<Buffer>('socketChunkQueue', { debugMode: true })
     this.webSocketFrameQueue = new Queue<Buffer>('webSocketFrameQueue', { debugMode: true })
+    this.wsFragmentCache = []
     this.socketChunkQueue.on('enqueue', this.handleSocketChunk.bind(this))
     this.webSocketFrameQueue.on('enqueue', this.handleWSFrame.bind(this))
   }
@@ -34,6 +41,7 @@ export class WebSocketConnection {
     try {
       handleWSHandshake(this.httpRequest, this.socket)
       this._currentStage = 'OPENED'
+      this.connectionEstablished()
       this.socket.on('data', chunk => this.socketChunkQueue.enQueue(chunk))
     } catch (err) {
       this._currentStage = 'FAILED'
@@ -58,6 +66,7 @@ export class WebSocketConnection {
     const lengthInHeader = getLengthInFrame(queueHeader)
     if (queueHeader.byteLength === lengthInHeader) {
       // 包长度吻合，是正常的包
+      console.log(`收到正常的帧: 期望的长度 ${lengthInHeader} 实际收到的长度 ${queueHeader.byteLength}`)
       this.webSocketFrameQueue.enQueue(this.socketChunkQueue.deQueue())
     } else if (lengthInHeader > queueHeader.byteLength) {
       // 头部包的大小大于当前收到的包的大小，说明接下来还有包是是属于当前 Frame 的
@@ -68,16 +77,20 @@ export class WebSocketConnection {
       }
       if (totalBufferLength === lengthInHeader) {
         // 已得到正确的 Buffer
+        console.log(`收到不完整的帧，拼接得到正确的帧: 期望的长度 ${lengthInHeader} 实际收到的长度 ${totalBufferLength}`)
         this.webSocketFrameQueue.enQueue(Buffer.concat(this.socketChunkQueue.deQueueMultiple(bufferAmount)))
       } else if (totalBufferLength > lengthInHeader) {
         // 错误的包，丢弃之
+        console.log(`收到不完整的帧，拼接后得到错误的帧: 期望的长度 ${lengthInHeader} 实际收到的长度 ${totalBufferLength}`, this.socketChunkQueue.header)
         this.socketChunkQueue.deQueue()
       } else {
         // 还未收到后续的包，继续等待。
+        console.log(`收到不完整的帧，等待后续的帧: 期望的长度 ${lengthInHeader} 实际收到的长度 ${totalBufferLength}`)
         needNextTrigger = false
       }
     } else {
       // 错误的包，丢弃之
+      console.log(`收到帧的长度错误 : 期望的长度 ${lengthInHeader} 实际收到的长度 ${queueHeader.byteLength}`)
       this.socketChunkQueue.deQueue()
     }
     this.socketHandlerBusy = false
@@ -87,12 +100,25 @@ export class WebSocketConnection {
   private handleWSFrame () {
     if (this.wsFrameHandlerBusy || this.webSocketFrameQueue.isEmpty) { return }
     this.wsFrameHandlerBusy = true
-    if (isWSFrameFin(this.webSocketFrameQueue.header)) {
-      const content = getFrameContent(this.webSocketFrameQueue.deQueue())
-      this.wsFrameHandlerBusy = false
-      this.handleWSFrame()
-      return
+    if (isControlFrame(this.webSocketFrameQueue.header)) {
+      this.handleControlFrame(this.webSocketFrameQueue.deQueue())
+    } else {
+      console.log(`收到普通帧，已加入缓存`)
+      this.wsFragmentCache.push(this.webSocketFrameQueue.deQueue())
+      if (isWSFrameFin(this.wsFragmentCache[this.wsFragmentCache.length - 1])) {
+        console.log(`收到完整的帧序列，已进入处理`)
+        const content = getFrameContent(this.wsFragmentCache.slice())
+        this.wsFragmentCache = []
+        console.log(content, content.content.length)
+      }
     }
-    // TODO: ws frame 层拼接逻辑
+    this.wsFrameHandlerBusy = false
+    this.handleWSFrame()
+  }
+
+  private handleControlFrame (frame: Buffer) {
+    // TODO: 处理控制帧
+    console.log(`收到控制帧 `)
+
   }
 }
