@@ -1,16 +1,16 @@
 import { IncomingMessage } from 'http'
 import { Socket } from 'net'
+import { EventEmitter } from 'events'
 
 import { handleWSHandshake } from './ws.handshake'
 import { getLengthInFrame, isWSFrameFin, getFrameContent, isControlFrame } from './ws.frame-reader'
 
 import { Queue } from '../../utils/queue'
 import { createLogger } from '../logger'
-import { Buffer } from 'buffer';
 
 
 const console = createLogger('ws.connection')
-export class WebSocketConnection {
+export class WebSocketConnection extends EventEmitter {
   private _currentStage = 'OPENING'
   private socket: Socket
   private httpRequest: IncomingMessage
@@ -21,8 +21,13 @@ export class WebSocketConnection {
   private wsFragmentCache: Array<Buffer>
 
   constructor (req: IncomingMessage, socket: Socket) {
+    super()
     this.socket = socket
     this.httpRequest = req
+  }
+
+  get currentStage (): string {
+    return this._currentStage
   }
 
   private connectionEstablished () {
@@ -31,32 +36,6 @@ export class WebSocketConnection {
     this.wsFragmentCache = []
     this.socketChunkQueue.on('enqueue', this.handleSocketChunk.bind(this))
     this.webSocketFrameQueue.on('enqueue', this.handleWSFrame.bind(this))
-  }
-
-  get currentStage (): string {
-    return this._currentStage
-  }
-
-  public handShake () {
-    if (this._currentStage !== 'OPENING') return
-    try {
-      handleWSHandshake(this.httpRequest, this.socket)
-      this._currentStage = 'OPENED'
-      this.connectionEstablished()
-      this.socket.on('data', chunk => this.socketChunkQueue.enQueue(chunk))
-    } catch (err) {
-      this._currentStage = 'FAILED'
-      throw err
-    }
-  }
-
-  public destroy () {
-    try {
-      this.socket.destroyed && this.socket.destroy()
-      this.socket = null
-      this.httpRequest = null
-      this._currentStage = 'DESTROYED'
-    } catch (err) { }
   }
 
   private handleSocketChunk () {
@@ -115,7 +94,7 @@ export class WebSocketConnection {
         console.log(`收到完整的帧序列，已进入处理`)
         const content = getFrameContent(this.wsFragmentCache.slice())
         this.wsFragmentCache = []
-        console.log(content, content.content.length)
+        this.emit('data', content)
       }
     }
     this.wsFrameHandlerBusy = false
@@ -126,5 +105,28 @@ export class WebSocketConnection {
     // TODO: 处理控制帧
     console.log(`收到控制帧 `)
 
+  }
+
+  public handShake () {
+    if (this._currentStage !== 'OPENING') return
+    try {
+      handleWSHandshake(this.httpRequest, this.socket)
+      this._currentStage = 'OPENED'
+      this.connectionEstablished()
+      this.socket.on('data', chunk => this.socketChunkQueue.enQueue(chunk))
+      this.emit('connect')
+    } catch (err) {
+      this._currentStage = 'FAILED'
+      throw err
+    }
+  }
+
+  public destroy () {
+    try {
+      this.socket.destroyed && this.socket.destroy()
+      this.socket = null
+      this.httpRequest = null
+      this._currentStage = 'DESTROYED'
+    } catch (err) { }
   }
 }

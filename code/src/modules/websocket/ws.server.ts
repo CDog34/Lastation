@@ -24,9 +24,9 @@ export class WebSocketServer extends EventEmitter {
   private handleIncomingUpgradeRequest (req: IncomingMessage, socket: Socket) {
     const newConnectionInstance = new WebSocketConnection(req, socket)
     try {
+      newConnectionInstance.once('connect', () => this.emit('connect', newConnectionInstance))
       newConnectionInstance.handShake()
       this.connections.push(newConnectionInstance)
-      this.emit('connect', newConnectionInstance)
       console.log('Connection Established!')
     } catch (err) {
       console.warn('HandShake Fail', err)

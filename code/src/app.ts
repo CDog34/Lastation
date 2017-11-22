@@ -27,3 +27,7 @@ const wsServer = WebSocketServer.createFromHttpServer(httpServer)
 httpServer.listen(2233, () => {
   console.log('ServerStart')
 })
+
+wsServer.on('connect', (socket) => {
+  socket.on('data', (data: Buffer) => console.log('收到 WS 数据：', data))
+})
