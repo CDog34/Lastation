@@ -29,7 +29,7 @@ export class WebSocketConnection extends EventEmitter {
     this.httpRequest = req
   }
 
-  get currentStage (): string {
+  get currentStage (): TConnectionState {
     return this._currentStage
   }
 
@@ -39,9 +39,13 @@ export class WebSocketConnection extends EventEmitter {
     this.wsFragmentCache = []
     this.socketChunkQueue.on('enqueue', this.handleSocketChunk.bind(this))
     this.webSocketFrameQueue.on('enqueue', this.handleWSFrame.bind(this))
+  }
 
-    console.log(createControlFrame(Opcode.Ping))
-    this.socket.write(createControlFrame(Opcode.Ping))
+  private write (buffer: Buffer): boolean {
+    if (this.currentStage !== 'OPEN') {
+      throw new Error(`Can not write to Socket in State ${this.currentStage}`)
+    }
+    return this.socket.write(buffer)
   }
 
   private handleSocketChunk () {
@@ -113,12 +117,12 @@ export class WebSocketConnection extends EventEmitter {
     console.log(`收到控制帧`)
     switch (frameObj.type) {
       case Opcode.Close:
-        const statusCode = frameObj.rawBuffer.readUInt16BE(0)
-        console.log('收到客户端发来的 关闭链接 请求，状态码：', statusCode)
-        this.close(statusCode)
+        console.log('收到客户端发来的 关闭链接 请求')
+        this.handleClientCloseFrame(frameObj.rawBuffer)
         break
       case Opcode.Ping:
         console.log('收到客户端发来的 Ping 请求，请求体', frameObj.rawBuffer)
+        this.handleClientPingFrame(frameObj.rawBuffer)
         break
       case Opcode.Pong:
         console.log('收到客户端发来的 Pong 请求，请求体', frameObj.rawBuffer)
@@ -141,6 +145,18 @@ export class WebSocketConnection extends EventEmitter {
     }
   }
 
+  private handleClientCloseFrame (frameContent: Buffer) {
+    if (this.currentStage === 'OPEN') {
+      this.write(createControlFrame(Opcode.Close, frameContent))
+      this.destroy()
+    } else if (this.currentStage === "CLOSING") {
+      this.destroy()
+    }
+  }
+
+  private handleClientPingFrame (frameContent: Buffer) {
+    this.write(createControlFrame(Opcode.Pong, frameContent))
+  }
 
   private destroy () {
     try {
@@ -153,18 +169,16 @@ export class WebSocketConnection extends EventEmitter {
 
   public sendText (text: string) {
     const frame = createTextFrame(true, text)
-    this.socket.write(frame)
+    this.write(frame)
   }
 
   public close (reasonStatus: number = 1000) {
-    if (this.currentStage === "CLOSING") {
-      this.destroy()
-    }
     this._currentStage = "CLOSING"
     const payload = Buffer.alloc(2)
-    payload.writeInt16BE(0, reasonStatus)
+    console.log(payload)
+    payload.writeUInt16LE(reasonStatus, 0)
     const closeFrame = createControlFrame(Opcode.Close, payload)
-    this.socket.write(closeFrame)
+    this.write(closeFrame)
   }
 
 }
