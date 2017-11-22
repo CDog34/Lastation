@@ -1,0 +1,1 @@
+type TConnectionState = 'OPEN' | 'CLOSE' | 'TIME_WAIT' | 'NEW'

@@ -11,7 +11,7 @@ import { createLogger } from '../logger'
 
 const console = createLogger('ws.connection')
 export class WebSocketConnection extends EventEmitter {
-  private _currentStage = 'OPENING'
+  private _currentStage: TConnectionState = 'NEW'
   private socket: Socket
   private httpRequest: IncomingMessage
   private socketHandlerBusy: boolean = false
@@ -108,15 +108,15 @@ export class WebSocketConnection extends EventEmitter {
   }
 
   public handShake () {
-    if (this._currentStage !== 'OPENING') return
+    if (this._currentStage !== 'NEW') return
     try {
       handleWSHandshake(this.httpRequest, this.socket)
-      this._currentStage = 'OPENED'
+      this._currentStage = 'OPEN'
       this.connectionEstablished()
       this.socket.on('data', chunk => this.socketChunkQueue.enQueue(chunk))
       this.emit('connect')
     } catch (err) {
-      this._currentStage = 'FAILED'
+      this._currentStage = 'CLOSE'
       throw err
     }
   }
@@ -126,7 +126,7 @@ export class WebSocketConnection extends EventEmitter {
       this.socket.destroyed && this.socket.destroy()
       this.socket = null
       this.httpRequest = null
-      this._currentStage = 'DESTROYED'
+      this._currentStage = 'CLOSE'
     } catch (err) { }
   }
 }
