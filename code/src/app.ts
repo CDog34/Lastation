@@ -4,7 +4,7 @@ import { createServer, IncomingMessage, ServerResponse } from 'http'
 import { Server as StaticServer } from 'node-static'
 import { Socket } from 'net'
 
-import { WebSocketServer } from './modules/websocket'
+import { WebSocketServer, WebSocketConnection } from './modules/websocket'
 import { createLogger } from './modules/logger'
 
 const console = createLogger('HttpServer')
@@ -28,6 +28,9 @@ httpServer.listen(2233, () => {
   console.log('ServerStart')
 })
 
-wsServer.on('connect', (socket) => {
-  socket.on('data', (data: Buffer) => console.log('收到 WS 数据：', data))
+wsServer.on('connect', (socket: WebSocketConnection) => {
+  socket.on('data', (data: IFrameData) => {
+
+    socket.sendText(data.content)
+  })
 })

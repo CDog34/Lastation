@@ -4,9 +4,12 @@ import { EventEmitter } from 'events'
 
 import { handleWSHandshake } from './ws.handshake'
 import { getLengthInFrame, isWSFrameFin, getFrameContent, isControlFrame } from './ws.frame-reader'
+import { createTextFrame, createControlFrame } from './ws.frame-writer'
+import { Opcode } from './ws.frame'
 
 import { Queue } from '../../utils/queue'
 import { createLogger } from '../logger'
+import { Buffer } from 'buffer';
 
 
 const console = createLogger('ws.connection')
@@ -36,6 +39,9 @@ export class WebSocketConnection extends EventEmitter {
     this.wsFragmentCache = []
     this.socketChunkQueue.on('enqueue', this.handleSocketChunk.bind(this))
     this.webSocketFrameQueue.on('enqueue', this.handleWSFrame.bind(this))
+
+    console.log(createControlFrame(Opcode.Ping))
+    this.socket.write(createControlFrame(Opcode.Ping))
   }
 
   private handleSocketChunk () {
@@ -88,10 +94,10 @@ export class WebSocketConnection extends EventEmitter {
     if (isControlFrame(this.webSocketFrameQueue.header)) {
       this.handleControlFrame(this.webSocketFrameQueue.deQueue())
     } else {
-      console.log(`收到普通帧，已加入缓存`)
+      console.log(`收到数据帧，已加入缓存`)
       this.wsFragmentCache.push(this.webSocketFrameQueue.deQueue())
       if (isWSFrameFin(this.wsFragmentCache[this.wsFragmentCache.length - 1])) {
-        console.log(`收到完整的帧序列，已进入处理`)
+        console.log(`收到完整的数据帧序列，已进入处理`)
         const content = getFrameContent(this.wsFragmentCache.slice())
         this.wsFragmentCache = []
         this.emit('data', content)
@@ -103,7 +109,21 @@ export class WebSocketConnection extends EventEmitter {
 
   private handleControlFrame (frame: Buffer) {
     // TODO: 处理控制帧
-    console.log(`收到控制帧 `)
+    const frameObj = getFrameContent(frame)
+    console.log(`收到控制帧`)
+    switch (frameObj.type) {
+      case Opcode.Close:
+        const statusCode = frameObj.rawBuffer.readUInt16BE(0)
+        console.log('收到客户端发来的 关闭链接 请求，状态码：', statusCode)
+        this.close(statusCode)
+        break
+      case Opcode.Ping:
+        console.log('收到客户端发来的 Ping 请求，请求体', frameObj.rawBuffer)
+        break
+      case Opcode.Pong:
+        console.log('收到客户端发来的 Pong 请求，请求体', frameObj.rawBuffer)
+        break
+    }
 
   }
 
@@ -116,17 +136,35 @@ export class WebSocketConnection extends EventEmitter {
       this.socket.on('data', chunk => this.socketChunkQueue.enQueue(chunk))
       this.emit('connect')
     } catch (err) {
-      this._currentStage = 'CLOSE'
+      this._currentStage = 'CLOSED'
       throw err
     }
   }
 
-  public destroy () {
+
+  private destroy () {
     try {
-      this.socket.destroyed && this.socket.destroy()
+      !this.socket.destroyed && this.socket.destroy()
       this.socket = null
       this.httpRequest = null
-      this._currentStage = 'CLOSE'
+      this._currentStage = 'CLOSED'
     } catch (err) { }
   }
+
+  public sendText (text: string) {
+    const frame = createTextFrame(true, text)
+    this.socket.write(frame)
+  }
+
+  public close (reasonStatus: number = 1000) {
+    if (this.currentStage === "CLOSING") {
+      this.destroy()
+    }
+    this._currentStage = "CLOSING"
+    const payload = Buffer.alloc(2)
+    payload.writeInt16BE(0, reasonStatus)
+    const closeFrame = createControlFrame(Opcode.Close, payload)
+    this.socket.write(closeFrame)
+  }
+
 }

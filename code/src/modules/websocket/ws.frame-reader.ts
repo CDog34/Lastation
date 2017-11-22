@@ -1,12 +1,5 @@
 const FRAME_HEADER = 0x8
-enum Opcode {
-  Continuation = 0x0,
-  Text = 0x1,
-  Binary = 0x2,
-  Close = 0x8,
-  Ping = 0x9,
-  Pong = 0xA
-}
+import { Opcode } from './ws.frame'
 
 /**
  * 根据 Websocket Frame 的头部信息获取一个 Websocket Frame 的长度
@@ -54,19 +47,13 @@ export function getFrameContent (data: Array<Buffer> | Buffer): IFrameData {
   }
   const buffers = data.map(getSingleWSFramePayloadBuffer)
   const entireContent = Buffer.concat(buffers)
-  if ((data[0].readUInt8(0) & 0x0F) === Opcode.Text) {
-    return {
-      type: 'text',
-      rawBuffer: entireContent,
-      content: entireContent.toString()
-    }
-  } else {
-    return {
-      type: 'raw',
-      rawBuffer: entireContent,
-      content: entireContent
-    }
+  const opCode = data[0].readUInt8(0) & 0x0f
+  return {
+    type: opCode,
+    rawBuffer: entireContent,
+    content: opCode === Opcode.Text ? entireContent.toString() : entireContent
   }
+
 }
 
 function umaskPayload (payloadBuffer: Buffer, maskingKey: Buffer): Buffer {
@@ -113,6 +100,7 @@ function getSingleWSFramePayloadBuffer (data: Buffer): Buffer {
   let offsetByte = 1
   const content = data.readUInt8(offsetByte++)
   const payloadLength = getSingleWSFramePayloadLength(data)
+  if (payloadLength === 0) return Buffer.alloc(0)
   const isMask = (content & 0x80) > 0
   let maskingKey: Buffer
   if (payloadLength > 125) {

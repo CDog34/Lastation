@@ -7,7 +7,7 @@ ws.onopen = function (evt) {
 
 ws.onmessage = function (evt) {
   console.log('Received Message: ' + evt.data);
-  ws.close();
+  // ws.close();
 };
 
 ws.onclose = function (evt) {
