@@ -54,6 +54,12 @@ export class Queue<T> extends EventEmitter {
       : this.queue[0]
   }
 
+  public set header (item: T) {
+    if (!!this.queue[0]) {
+      this.queue[0] = item
+    }
+  }
+
   public get length (): number {
     return this.queue.length || 0
   }

@@ -6,6 +6,7 @@ import { getLengthInFrame, isWSFrameFin, getFrameContent, isControlFrame } from 
 
 import { Queue } from '../../utils/queue'
 import { createLogger } from '../logger'
+import { Buffer } from 'buffer';
 
 
 const console = createLogger('ws.connection')
@@ -80,9 +81,14 @@ export class WebSocketConnection {
         console.log(`收到不完整的帧，拼接得到正确的帧: 期望的长度 ${lengthInHeader} 实际收到的长度 ${totalBufferLength}`)
         this.webSocketFrameQueue.enQueue(Buffer.concat(this.socketChunkQueue.deQueueMultiple(bufferAmount)))
       } else if (totalBufferLength > lengthInHeader) {
-        // 错误的包，丢弃之
-        console.log(`收到不完整的帧，拼接后得到错误的帧: 期望的长度 ${lengthInHeader} 实际收到的长度 ${totalBufferLength}`, this.socketChunkQueue.header)
-        this.socketChunkQueue.deQueue()
+        // 需要切割的帧
+        console.log(`收到不完整的帧，需要切割: 期望的长度 ${lengthInHeader} 实际收到的长度 ${totalBufferLength}`, this.socketChunkQueue.header)
+        const chunkCache = this.socketChunkQueue.deQueueMultiple(bufferAmount - 1)
+        const lastChunk = this.socketChunkQueue.header
+        const lengthLeak = lengthInHeader - (totalBufferLength - lastChunk.byteLength)
+        chunkCache.push(lastChunk.slice(0, lengthLeak))
+        this.socketChunkQueue.header = lastChunk.slice(lengthLeak)
+        this.webSocketFrameQueue.enQueue(Buffer.concat(chunkCache))
       } else {
         // 还未收到后续的包，继续等待。
         console.log(`收到不完整的帧，等待后续的帧: 期望的长度 ${lengthInHeader} 实际收到的长度 ${totalBufferLength}`)
