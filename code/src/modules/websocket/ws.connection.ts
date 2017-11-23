@@ -39,11 +39,15 @@ export class WebSocketConnection extends EventEmitter {
     this.wsFragmentCache = []
     this.socketChunkQueue.on('enqueue', this.handleSocketChunk.bind(this))
     this.webSocketFrameQueue.on('enqueue', this.handleWSFrame.bind(this))
+    this.socket.setTimeout(0)
   }
 
-  private write (buffer: Buffer): boolean {
+  private write (buffer: Buffer | Array<Buffer>): boolean | Array<boolean> {
     if (this.currentStage !== 'OPEN') {
       throw new Error(`Can not write to Socket in State ${this.currentStage}`)
+    }
+    if (Array.isArray(buffer)) {
+      return buffer.map(slice => this.socket.write(slice))
     }
     return this.socket.write(buffer)
   }
@@ -112,7 +116,6 @@ export class WebSocketConnection extends EventEmitter {
   }
 
   private handleControlFrame (frame: Buffer) {
-    // TODO: 处理控制帧
     const frameObj = getFrameContent(frame)
     console.log(`收到控制帧`)
     switch (frameObj.type) {
@@ -168,7 +171,7 @@ export class WebSocketConnection extends EventEmitter {
   }
 
   public sendText (text: string) {
-    const frame = createTextFrame(true, text)
+    const frame = createTextFrame(text)
     this.write(frame)
   }
 

@@ -1,9 +1,9 @@
 import { Opcode } from './ws.frame'
 
-const MAX_FRAME_LENGTH = 99999999
+const MAX_FRAME_LENGTH = 65536
 
 function createSingleFrame (isFin: boolean, opcode: Opcode, isMask: boolean, payload?: Buffer) {
-  if (!!payload && payload.byteLength >= MAX_FRAME_LENGTH) {
+  if (!!payload && payload.byteLength > MAX_FRAME_LENGTH) {
     throw new Error('Frame too large')
   }
   if (isMask) {
@@ -17,7 +17,7 @@ function createSingleFrame (isFin: boolean, opcode: Opcode, isMask: boolean, pay
   if (payloadLength < 126) {
     payloadLengthHigh7 = payloadLength
     payloadLength = 0
-  } else if (payloadLength < 65537) {
+  } else if (payloadLength < 65536) {
     payloadLengthHigh7 = 126
     headerBufferSize += 2
   } else {
@@ -47,12 +47,34 @@ function generateHeader (isFin: boolean, opcode: Opcode): number {
   }
 }
 
-export function createTextFrame (isFin: boolean, text: string): Buffer {
-  return createSingleFrame(isFin, Opcode.Text, false, Buffer.from(text))
+export function createTextFrame (text: string): Buffer | Array<Buffer> {
+  const entireBuffer = Buffer.from(text)
+  if (entireBuffer.byteLength <= MAX_FRAME_LENGTH) {
+    return createSingleFrame(true, Opcode.Text, false, Buffer.from(text))
+  }
+  const contentSlices = splitFrames(entireBuffer)
+  return contentSlices.map((slice, index) => createSingleFrame(
+    index === (contentSlices.length - 1),
+    (index === 0) ? Opcode.Text : Opcode.Continuation,
+    false,
+    slice
+  ))
 }
 export function createControlFrame (opCode: Opcode, payload?: Buffer) {
   if (!(opCode & 0x8)) {
     throw new Error('Not Valid Control Frame OPCode')
   }
   return createSingleFrame(true, opCode, false, payload)
+}
+
+function splitFrames (bigFrameContent: Buffer): Array<Buffer> {
+  if (bigFrameContent.byteLength <= MAX_FRAME_LENGTH) {
+    return [bigFrameContent]
+  }
+  const frameAmount = Math.ceil(bigFrameContent.byteLength / MAX_FRAME_LENGTH)
+  const res: Array<Buffer> = []
+  for (let i = 0; i < frameAmount; i++) {
+    res.push(bigFrameContent.slice(i * MAX_FRAME_LENGTH, (i + 1) * MAX_FRAME_LENGTH))
+  }
+  return res
 }
