@@ -178,7 +178,6 @@ export class WebSocketConnection extends EventEmitter {
   public close (reasonStatus: number = 1000) {
     this._currentStage = "CLOSING"
     const payload = Buffer.alloc(2)
-    console.log(payload)
     payload.writeUInt16LE(reasonStatus, 0)
     const closeFrame = createControlFrame(Opcode.Close, payload)
     this.write(closeFrame)
