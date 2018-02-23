@@ -8,8 +8,9 @@
     "tsc-watch": "tsc -watch",
     "clean": "rimraf dist",
     "nodemon": "nodemon ./dist/app.js",
+    "nodemon-dev": "nodemon --inspect ./dist/app.js",
     "build": "tsc",
-    "dev": "npm run clean && npm run build  && concurrently -r 'npm run tsc-watch' 'npm run nodemon'"
+    "dev": "npm run clean && npm run build  && concurrently -r \"npm run tsc-watch\" \"npm run nodemon-dev\""
   },
   "author": "",
   "license": "ISC",

@@ -17,7 +17,7 @@ export class WebSocketServer extends EventEmitter {
     return newInstance
   }
 
-  private attachToHttpServer (httpServer: Server) {
+  public attachToHttpServer (httpServer: Server) {
     httpServer.on('upgrade', this.handleIncomingUpgradeRequest.bind(this))
   }
 
