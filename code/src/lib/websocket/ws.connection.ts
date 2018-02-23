@@ -22,6 +22,7 @@ export class WebSocketConnection extends EventEmitter {
   private socketChunkQueue: Queue<Buffer>
   private webSocketFrameQueue: Queue<Buffer>
   private wsFragmentCache: Array<Buffer>
+  private destroyTimer: NodeJS.Timer
 
   constructor (req: IncomingMessage, socket: Socket) {
     super()
@@ -44,7 +45,8 @@ export class WebSocketConnection extends EventEmitter {
 
   private write (buffer: Buffer | Array<Buffer>): boolean | Array<boolean> {
     if (this.currentStage !== 'OPEN') {
-      throw new Error(`Can not write to Socket in State ${this.currentStage}`)
+      console.error( new Error(`Can not write to Socket in State ${this.currentStage} with Content : ${buffer}`))
+      return
     }
     if (Array.isArray(buffer)) {
       return buffer.map(slice => this.socket.write(slice))
@@ -88,9 +90,18 @@ export class WebSocketConnection extends EventEmitter {
         needNextTrigger = false
       }
     } else {
-      // 错误的包，丢弃之
-      console.log(`收到帧的长度错误 : 期望的长度 ${lengthInHeader} 实际收到的长度 ${queueHeader.byteLength}`)
-      this.socketChunkQueue.deQueue()
+
+       // 需要切割的帧
+       console.log(`收到不完整的帧，需要切割: 期望的长度 ${lengthInHeader} 实际收到的长度 ${queueHeader.byteLength}`, this.socketChunkQueue.header)
+       const chunkCache = []
+       const lastChunk = this.socketChunkQueue.header
+       const lengthLeak = lastChunk.byteLength - lengthInHeader
+       chunkCache.push(lastChunk.slice(0, lengthLeak))
+       this.socketChunkQueue.header = lastChunk.slice(lengthLeak)
+       this.webSocketFrameQueue.enQueue(Buffer.concat(chunkCache))
+      // // 错误的包，丢弃之
+      // console.log(`收到帧的长度错误 : 期望的长度 ${lengthInHeader} 实际收到的长度 ${queueHeader.byteLength}`)
+      // this.socketChunkQueue.deQueue()
     }
     this.socketHandlerBusy = false
     needNextTrigger && this.handleSocketChunk()
@@ -161,8 +172,9 @@ export class WebSocketConnection extends EventEmitter {
     this.write(createControlFrame(Opcode.Pong, frameContent))
   }
 
-  private destroy () {
+  public destroy () {
     try {
+      clearTimeout(this.destroyTimer)
       !this.socket.destroyed && this.socket.destroy()
       this.socket = null
       this.httpRequest = null
@@ -176,11 +188,12 @@ export class WebSocketConnection extends EventEmitter {
   }
 
   public close (reasonStatus: number = 1000) {
-    this._currentStage = "CLOSING"
     const payload = Buffer.alloc(2)
     payload.writeUInt16LE(reasonStatus, 0)
     const closeFrame = createControlFrame(Opcode.Close, payload)
     this.write(closeFrame)
+    this._currentStage = "CLOSING"
+    this.destroyTimer = setTimeout(() => this.destroy(), 5000)
   }
 
 }
