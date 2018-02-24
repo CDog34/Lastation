@@ -1,9 +1,11 @@
 import { WebSocketConnection } from '../../lib/websocket'
+import { EventEmitter } from 'events'
+
 
 const HAND_SHAKE_TIMEOUT = 5 * 1000
 const HEART_BEAT_TIME = (30 + 5) * 1000
 
-export class WSSession {
+export class WSSession extends EventEmitter {
   private connection: WebSocketConnection
   private destroyTimer: NodeJS.Timer
   public roomId: number
@@ -15,6 +17,7 @@ export class WSSession {
   }
 
   constructor (wsConnection: WebSocketConnection) {
+    super()
     this.connection = wsConnection
     this.roomId = 0
     this.connection.on('end', () => this.destroy())
@@ -33,6 +36,7 @@ export class WSSession {
           if (json.cmd !== 'handshake' || !json.roomId) {
             throw new Error('Invalid Business Handshake: ' + content.content)
           }
+          this.roomId = json.roomId
           this.connection.sendText(JSON.stringify({
             code: 0,
             message: 'Business Handshake OK'
@@ -74,5 +78,19 @@ export class WSSession {
   private destroy () {
     clearTimeout(this.destroyTimer)
     !this.connection.isInCloseProcess && this.connection.close()
+    this.emit('end')
+  }
+
+  public send (cnt: any) {
+    const status = this.connection.currentStage
+    if (status !== 'OPEN') {
+      console.error('Cannot write to close Session')
+      return
+    }
+    this.connection.sendText(JSON.stringify({
+      code: 0,
+      message: 'Push',
+      data: cnt
+    }))
   }
 }
