@@ -179,6 +179,7 @@ export class WebSocketConnection extends EventEmitter {
       this.socket = null
       this.httpRequest = null
       this._currentStage = 'CLOSED'
+      this.emit('end')
     } catch (err) { }
   }
 
@@ -194,6 +195,10 @@ export class WebSocketConnection extends EventEmitter {
     this.write(closeFrame)
     this._currentStage = "CLOSING"
     this.destroyTimer = setTimeout(() => this.destroy(), 5000)
+  }
+
+  get isInCloseProcess(){
+    return this._currentStage === "CLOSING" || this._currentStage === 'CLOSED'
   }
 
 }

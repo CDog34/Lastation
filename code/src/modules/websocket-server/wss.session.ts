@@ -17,7 +17,7 @@ export class WSSession {
   constructor (wsConnection: WebSocketConnection) {
     this.connection = wsConnection
     this.roomId = 0
-
+    this.connection.on('end', () => this.destroy())
   }
 
   private waitBusinessHandshake (): Promise<void> {
@@ -37,7 +37,7 @@ export class WSSession {
             code: 0,
             message: 'Business Handshake OK'
           }))
-          this.startHeatbeatListener()
+          this.startHeartbeatListener()
           resolve()
         } catch (err) {
           reject(err)
@@ -47,7 +47,7 @@ export class WSSession {
     })
   }
 
-  private startHeatbeatListener () {
+  private startHeartbeatListener () {
     clearTimeout(this.destroyTimer)
     this.destroyTimer = setTimeout(() => this.destroy(), HEART_BEAT_TIME)
 
@@ -72,6 +72,7 @@ export class WSSession {
   }
 
   private destroy () {
-    this.connection.close()
+    clearTimeout(this.destroyTimer)
+    !this.connection.isInCloseProcess && this.connection.close()
   }
 }

@@ -9,7 +9,6 @@ import { createLogger } from '../logger'
 const console = createLogger('Websocket')
 
 export class WebSocketServer extends EventEmitter {
-  connections: Array<WebSocketConnection> = []
 
   static createFromHttpServer (httpServer: Server) {
     const newInstance = new WebSocketServer()
@@ -26,7 +25,6 @@ export class WebSocketServer extends EventEmitter {
     try {
       newConnectionInstance.once('connect', () => this.emit('connect', newConnectionInstance))
       newConnectionInstance.handShake()
-      this.connections.push(newConnectionInstance)
       console.log('Connection Established!')
     } catch (err) {
       console.warn('HandShake Fail', err)
