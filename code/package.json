@@ -9,8 +9,8 @@
     "clean": "rimraf dist",
     "nodemon": "nodemon ./dist/app.js",
     "nodemon-dev": "nodemon --inspect ./dist/app.js",
-    "build": "tsc && parcel build src.front/index.html -d public --public-url ./",
-    "dev": "npm run clean && npm run build  && concurrently -r \"npm run tsc-watch\" \"npm run nodemon-dev\" \"parcel watch --out-dir ./public --public-url ./ src.front/index.html\""
+    "build": "tsc && parcel build src.front/index.pug -d public --public-url ./",
+    "dev": "npm run clean && tsc && concurrently -r \"npm run tsc-watch\" \"npm run nodemon-dev\" \"parcel watch --out-dir ./public --public-url ./ src.front/index.pug\""
   },
   "author": "",
   "license": "ISC",
@@ -21,7 +21,10 @@
     "concurrently": "^3.5.0",
     "node-static": "^0.7.10",
     "nodemon": "^1.12.1",
+    "parcel-bundler": "^1.6.2",
+    "parcel-plugin-pug": "^0.2.5",
     "rimraf": "^2.6.2",
+    "stylus": "^0.54.5",
     "typescript": "^2.5.3"
   },
   "nodemonConfig": {
