@@ -1,5 +1,5 @@
-import { WSClient } from './lib'
-var ws = new WSClient(57796)
+import { WSClient } from './module/ws-client'
+const ws = new WSClient(57796)
 
 ws.on('message', function (data) {
   console.log(data)

@@ -10,13 +10,14 @@
     "nodemon": "nodemon ./dist/app.js",
     "nodemon-dev": "nodemon --inspect ./dist/app.js",
     "build": "tsc && parcel build src.front/index.html -d public --public-url ./",
-    "dev": "npm run clean && npm run build  && concurrently -r \"npm run tsc-watch\" \"npm run nodemon-dev\" \"parcel watch --out-dir ./public  src.front/index.html\""
+    "dev": "npm run clean && npm run build  && concurrently -r \"npm run tsc-watch\" \"npm run nodemon-dev\" \"parcel watch --out-dir ./public --public-url ./ src.front/index.html\""
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@types/node": "^8.0.47",
     "@types/node-static": "^0.7.0",
+    "babel-preset-env": "^1.6.1",
     "concurrently": "^3.5.0",
     "node-static": "^0.7.10",
     "nodemon": "^1.12.1",
@@ -34,5 +35,8 @@
       "public"
     ],
     "ext": "js json"
+  },
+  "devDependencies": {
+    "babel-core": "^6.26.0"
   }
 }
