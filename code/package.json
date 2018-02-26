@@ -9,7 +9,7 @@
     "clean": "rimraf dist",
     "nodemon": "nodemon ./dist/app.js",
     "nodemon-dev": "nodemon --inspect ./dist/app.js",
-    "build": "tsc",
+    "build": "tsc && parcel build src.front/index.html -d public --public-url ./",
     "dev": "npm run clean && npm run build  && concurrently -r \"npm run tsc-watch\" \"npm run nodemon-dev\" \"parcel watch --out-dir ./public  src.front/index.html\""
   },
   "author": "",
