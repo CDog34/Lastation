@@ -1,4 +1,4 @@
-function WSClient(roomId) {
+export function WSClient(roomId) {
   if (!roomId || isNaN(parseInt(roomId, 0))) {
     throw new Error('RoomId is Required.')
   }

@@ -10,7 +10,7 @@
     "nodemon": "nodemon ./dist/app.js",
     "nodemon-dev": "nodemon --inspect ./dist/app.js",
     "build": "tsc",
-    "dev": "npm run clean && npm run build  && concurrently -r \"npm run tsc-watch\" \"npm run nodemon-dev\""
+    "dev": "npm run clean && npm run build  && concurrently -r \"npm run tsc-watch\" \"npm run nodemon-dev\" \"parcel watch --out-dir ./public  src.front/index.html\""
   },
   "author": "",
   "license": "ISC",
@@ -30,7 +30,8 @@
     ],
     "ignore": [
       ".git",
-      "node_modules/**/node_modules"
+      "node_modules/**/node_modules",
+      "public"
     ],
     "ext": "js json"
   }

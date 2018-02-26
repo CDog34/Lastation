@@ -1,3 +1,4 @@
+import { WSClient } from './lib'
 var ws = new WSClient(57796)
 
 ws.on('message', function (data) {
