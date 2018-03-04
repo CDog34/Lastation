@@ -26,8 +26,8 @@ export class WSClient extends EventEmitter {
   }
 
   public connect () {
-    try{
-      if (this.ws){
+    try {
+      if (this.ws) {
         this.unbindEvents()
       }
       this.ws = new WebSocket('ws://localhost:2233')
@@ -41,7 +41,8 @@ export class WSClient extends EventEmitter {
           roomId: this.roomId
         }))
       })
-    }catch(err){
+    } catch (err) {
+      this.emit('error', 'Websocket 链接出错')
       console.warn(err)
     }
   }
@@ -63,22 +64,28 @@ export class WSClient extends EventEmitter {
   }
 
   private handleClose () {
-    if (!this.isClosed){
+    this.emit('info', 'Websocket 链接关闭')
+    if (!this.isClosed) {
       this.retryConnect()
     }
   }
 
-  private retryConnect(){
+  private handleError (err) {
+    this.emit('error', 'Websocket 链接发生错误', err)
+  }
+
+  private retryConnect () {
     clearInterval(this.heartbeatInterval)
     clearTimeout(this.retryTimer)
-    if ( this.retryCount < FAIL_COUNT_LIMIT) {
+    if (this.retryCount < FAIL_COUNT_LIMIT) {
       this.retryTimer = setTimeout(() => {
+        this.emit('info', '链接断开，正在重试')
         console.warn('Connection Closed, retrying...')
         this.retryCount++
         this.connect()
       }, RETRY_TIMEOUT)
     } else {
-      console.error('Connection Failed!')
+      this.emit('error', '链接建立失败')
     }
   }
 
@@ -88,16 +95,16 @@ export class WSClient extends EventEmitter {
     }
     this.ws.addEventListener('message', this.handleMessage.bind(this))
     this.ws.addEventListener('close', this.handleClose.bind(this))
-    this.ws.addEventListener('error', this.handleClose.bind(this))
+    this.ws.addEventListener('error', this.handleError.bind(this))
   }
 
-  private unbindEvents(){
+  private unbindEvents () {
     if (!this.ws) {
       return
     }
     this.ws.removeEventListener('message', this.handleMessage.bind(this))
     this.ws.removeEventListener('close', this.handleClose.bind(this))
-    this.ws.removeEventListener('error', this.handleClose.bind(this))
+    this.ws.removeEventListener('error', this.handleError.bind(this))
   }
 
   startHeartbeat () {
