@@ -1,20 +1,21 @@
-import flvjs from 'flv.js'
+import * as flvjs from './flv'
 
 interface flvSpec {
   type: string
-  url:string
-  isLive:boolean
+  url: string
+  isLive: boolean
 }
 
 export function createPlayer (spec: flvSpec, ele: HTMLVideoElement) {
   if (!flvjs.isSupported()) {
     return null
   }
-  const { type,url,isLive } = spec
+  const { type, url, isLive } = spec
   const player = flvjs.createPlayer({
     type,
     url,
-    isLive
+    isLive,
+    cors: true
   })
   player.attachMediaElement(ele)
   return player

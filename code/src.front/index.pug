@@ -1,3 +1,4 @@
+doctype html
 html
   head
     meta(charset="utf-8")
@@ -10,4 +11,10 @@ html
     p.stream-intro.intro-text ↑ 直播视频流
     div#log-ctnr
     p.log-intro.intro-text ↑ Websocket 日志
+    div#input-ctnr
+      input#nick-name(type="text", placeholder="昵称")
+      input#danmaku-content(type="text", placeholder="消息内容")
+      button#danmaku-send-btn 提交
+      button#mute 静音
+
     script(src="./main.ts")

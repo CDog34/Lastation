@@ -8,7 +8,7 @@ import { getPlayUrl } from './http.play-url'
 export function createHttpServer (): Server {
 
   return createServer((req, res) => {
-    if (req.url === '/danmaku' && req.method.toLowerCase() === 'post' && req.headers['content-type'] === 'application/json') {
+    if (req.url === '/danmaku' && req.method.toLowerCase() === 'post' && req.headers['content-type'].indexOf('application/json') !== -1) {
       handleDanmakuPost(req, res)
     } else if (req.url === '/play-url' && req.method.toLowerCase() === 'get') {
       getPlayUrl(req, res)

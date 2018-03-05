@@ -2,7 +2,9 @@ import { WSClient } from './module/ws-client'
 import { getPlayerUrl } from './service/play-url'
 import { createPlayer } from './module/player'
 import { Logger } from './module/logger'
+import { handleInput } from './module/input-handler'
 
+let player
 
 function initWebsocket (logger?: Logger): WSClient {
   const ws = new WSClient(57796)
@@ -28,7 +30,7 @@ async function initPlayer () {
   const playUrls = await getPlayerUrl()
   const url = playUrls.durl[0].url
   const ele = <HTMLVideoElement> document.getElementById('video-ctnr')
-  const player = createPlayer({
+  player = createPlayer({
     isLive: true,
     url,
     type: 'flv'
@@ -43,5 +45,19 @@ function initLogger (): Logger {
 }
 
 const logger = initLogger()
-initWebsocket(logger)
 initPlayer()
+initWebsocket(logger)
+document.getElementById('danmaku-send-btn').addEventListener('click', async () => {
+  const nickInputEle = <HTMLInputElement> document.getElementById('nick-name')
+  const cntInputEle = <HTMLInputElement> document.getElementById('danmaku-content')
+  const nickValue = nickInputEle.value
+  const cntValue = cntInputEle.value
+  if (!nickValue || !cntValue) { return }
+  await handleInput(nickValue, cntValue)
+  nickInputEle.value = ''
+  cntInputEle.value = ''
+})
+
+document.getElementById('mute').addEventListener('click', () => {
+  player.muted = !player.muted
+})
