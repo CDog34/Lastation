@@ -1,4 +1,4 @@
-import * as flvjs from './flv'
+import * as flvjs from 'flv.js/dist/flv.js'
 
 interface flvSpec {
   type: string
